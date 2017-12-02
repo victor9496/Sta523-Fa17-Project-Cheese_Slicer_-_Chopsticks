@@ -86,7 +86,6 @@ colnames(df.final) = c("name", "count", "score", "distance", "image", "plan", "r
 #   html_nodes('#content_PropertyBreakdown .score') %>% 
 #   html_text() 
 
-df.final = droplevels(df.final)
 
 return(df.final)
 
