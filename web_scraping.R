@@ -108,29 +108,3 @@ return(df.final)
 
 }
 
-
-
-
-
-image_url = site %>%
-  read_html() %>%
-  html_nodes('.gallery-image') %>% 
-  html_attrs() %>% 
-  #only include first image
-  .[[2]] %>% 
-  .[str_detect(.,"^/.*g$")] %>% 
-  paste0("http:", .)
-
-
-
-
-image_url = site %>%
-  read_html() %>%
-  html_nodes('.gallery-image') %>% 
-  html_attrs() %>% 
-  unlist() %>% 
-  str_extract("^/.*g$") %>% 
-  .[!is.na(.)] %>% 
-  .[1] %>% 
-  paste0("http:", .)
-
