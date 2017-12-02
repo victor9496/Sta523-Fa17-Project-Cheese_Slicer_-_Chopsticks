@@ -8,20 +8,22 @@ library(dplyr)
 
 site = "example.htm"
 
+apartment_finder = function(site) {
+
+extract_info = function(node) {
+  site %>% 
+    read_html() %>% 
+    html_node(node) %>% 
+    html_text()
+}
 #total count
-review_count = site %>%
-  read_html() %>%
-  html_nodes('script[type="application/ld+json"]') %>% 
-  html_text() %>% 
-  str_extract_all(., "reviewRating") %>% 
-  unlist() %>% 
-  length()
+review_count = extract_info('script[type="application/ld+json"]') %>% 
+               str_extract_all(., "reviewRating") %>% 
+               unlist() %>% 
+               length()
 
 #count and average score
-review_score = site %>%
-  read_html() %>%
-  html_nodes('script[type="application/ld+json"]') %>% 
-  html_text() %>% 
+review_score = extract_info('script[type="application/ld+json"]') %>% 
   str_extract_all('"reviewCount": "\\d+|"ratingValue": "\\d\\.\\d') %>% 
   str_extract_all("\\d\\.\\d|\\d+") %>% 
   unlist() %>% 
@@ -31,17 +33,14 @@ review_score = site %>%
 lon_lat = site %>%
   read_html() %>%
   html_text() %>% 
-  str_extract_all("\\[\\'longitude\\'\\] = '-\\d+\\.\\d+|\\[\\'latitude\\'\\] = '\\d+\\.\\d+") %>%  
+  str_extract_all("\\[\\'longitude\\'\\] = '-\\d+\\.\\d+|
+                  \\[\\'latitude\\'\\] = '\\d+\\.\\d+") %>%  
   str_extract_all("-?\\d+\\.\\d+") %>% 
   unlist() %>% 
   as.numeric()
 
 #apartment name
-apt_name = site %>%
-  read_html() %>%
-  html_nodes('.last span') %>% 
-  html_text() 
-
+apt_name = extract_info('.last span')
 
 #floor plan
 floor_plan = site %>%
@@ -85,4 +84,6 @@ colnames(df.final) = c("name", "count", "score", "image", "plan", "rent")
 #   html_nodes('#content_PropertyBreakdown .score') %>% 
 #   html_text() 
 
+return(df.final)
 
+}
