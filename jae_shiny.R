@@ -18,7 +18,7 @@ shinyApp(
     sidebarLayout(
       sidebarPanel(
         h4("Top5-Top15"),
-        sliderInput("top", label=NULL,min = 5, max = 15,value=5, step=5),
+        sliderInput("top", label=NULL,min = 5, max = 15,value=5, step=1),
         h4("Price Range"),
         radioButtons("price",label="Below:",choices= c("500", "700", "1000")),
         h4("Distance"),
