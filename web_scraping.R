@@ -35,8 +35,7 @@ review_score = extract_info('script[type="application/ld+json"]') %>%
 lon_lat = site %>%
   read_html() %>%
   html_text() %>% 
-  str_extract_all("\\[\\'longitude\\'\\] = '-\\d+\\.\\d+|
-                  \\[\\'latitude\\'\\] = '\\d+\\.\\d+") %>%  
+  str_extract_all("\\[\\'longitude\\'\\] = '-\\d+\\.\\d+|\\[\\'latitude\\'\\] = '\\d+\\.\\d+") %>%  
   str_extract_all("-?\\d+\\.\\d+") %>% 
   unlist() %>% 
   as.numeric()
