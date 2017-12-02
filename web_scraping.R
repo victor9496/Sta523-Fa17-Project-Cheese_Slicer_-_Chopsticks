@@ -6,7 +6,7 @@ library(geosphere)
 library(dplyr)
 
 
-site = "example.htm"
+site = "sample2.htm"
 
 apartment_finder = function(site) {
 
@@ -61,9 +61,11 @@ image_url = site %>%
   read_html() %>%
   html_nodes('.gallery-image') %>% 
   html_attrs() %>% 
-#only include first image
-  .[[1]] %>% 
-  .[str_detect(.,"^/.*g$")] %>% 
+  unlist() %>% 
+  str_extract("^/.*g$") %>% 
+  .[!is.na(.)] %>% 
+#only need the first image
+  .[1] %>% 
   paste0("http:", .)
 
 #distance to chapel
@@ -71,6 +73,7 @@ chapel = c(-78.9424706, 36.0018988)
 distance = round(distm(lon_lat, chapel, fun = distHaversine)[1]) %>% 
   as.numeric()
 
+#calculate average floor size
 floor = site %>%
   read_html() %>%
   html_nodes('#floorplans .widget') %>% 
@@ -78,11 +81,11 @@ floor = site %>%
 
 split_floor = unlist(str_split(floor, "\\d Bedrooms, \\d Bathroom"), recursive = FALSE)
 
-data = unlist(lapply(split_floor, 
+num_floor = unlist(lapply(split_floor, 
                      function(i) str_extract_all(str_replace_all(i, ",", ""), "\\d{3,}")), 
               recursive = FALSE)
 
-floor_mean = unlist(lapply(data, function(i) mean(as.numeric(i))))
+floor_mean = unlist(lapply(num_floor, function(i) mean(as.numeric(i))))
 floor_mean_clean = floor_mean[!is.nan(floor_mean)]
 
 #generate final dataframe
@@ -104,3 +107,30 @@ colnames(df.final) = c("name", "image", "plan", "rent",
 return(df.final)
 
 }
+
+
+
+
+
+image_url = site %>%
+  read_html() %>%
+  html_nodes('.gallery-image') %>% 
+  html_attrs() %>% 
+  #only include first image
+  .[[2]] %>% 
+  .[str_detect(.,"^/.*g$")] %>% 
+  paste0("http:", .)
+
+
+
+
+image_url = site %>%
+  read_html() %>%
+  html_nodes('.gallery-image') %>% 
+  html_attrs() %>% 
+  unlist() %>% 
+  str_extract("^/.*g$") %>% 
+  .[!is.na(.)] %>% 
+  .[1] %>% 
+  paste0("http:", .)
+
