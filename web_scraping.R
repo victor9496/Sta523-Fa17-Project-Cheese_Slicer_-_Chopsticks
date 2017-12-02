@@ -1,18 +1,13 @@
 library(rvest)
 library(magrittr)
 library(stringr)
-
-
-
-
-site_url1 = "https://www.apartmentratings.com/nc/durham/heights-at-meridian_9199332346275157194/"
-site_url1 = "https://www.apartmentratings.com/nc/durham/heights-at-meridian_9199332346275157194/"
-
+library(purrr)
+library(geosphere)
 
 
 site = "example.htm"
 
-#total cout
+#total count
 review_count = site %>%
   read_html() %>%
   html_nodes('script[type="application/ld+json"]') %>% 
@@ -36,14 +31,14 @@ lon_lat = site %>%
   html_text() %>% 
   str_extract_all("\\[\\'longitude\\'\\] = '-\\d+\\.\\d+|\\[\\'latitude\\'\\] = '\\d+\\.\\d+") %>%  
   str_extract_all("-?\\d+\\.\\d+") %>% 
-  unlist()
+  unlist() %>% 
+  as.numeric()
 
 #apartment name
 apt_name = site %>%
   read_html() %>%
   html_nodes('.last span') %>% 
   html_text() 
-
 
 
 #floor plan
@@ -57,7 +52,23 @@ floor_plan = site %>%
 rent = site %>%
   read_html() %>%
   html_nodes('div[class="floor-detail-row-rent"]') %>% 
-  html_text() %>% 
+  html_text()
+
+#image 
+image_url = site %>%
+  read_html() %>%
+  html_nodes('.gallery-image') %>% 
+  html_attrs() %>% 
+#only include first image
+  .[[1]] %>% 
+  .[str_detect(.,"^/.*g$")] %>% 
+  paste0("http:", .)
+
+#distance to chapel
+chapel = c(-78.9424706, 36.0018988)
+distance = distm(lon_lat, chapel, fun = distHaversine)
+
+
 
 
 
