@@ -81,9 +81,10 @@ floor = site %>%
 
 split_floor = unlist(str_split(floor, "\\d Bedrooms, \\d Bathroom"), recursive = FALSE)
 
-num_floor = unlist(lapply(split_floor, 
-                     function(i) str_extract_all(str_replace_all(i, ",", ""), "\\d{3,}")), 
-              recursive = FALSE)
+num_floor = unlist(lapply(split_floor,
+                          function(i) str_extract_all(str_replace_all(i, ",", ""), "\\.\\d{3,}")),
+                   recursive = FALSE) %>% 
+  lapply(., function(i) str_replace_all(i, "\\.", ""))
 
 floor_mean = unlist(lapply(num_floor, function(i) mean(as.numeric(i))))
 floor_mean_clean = floor_mean[!is.nan(floor_mean)]
