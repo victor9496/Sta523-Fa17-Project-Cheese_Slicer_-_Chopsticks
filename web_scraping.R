@@ -6,7 +6,7 @@ library(geosphere)
 library(dplyr)
 
 
-site = "sample2.htm"
+site = "webURLS/web130.htm"
 
 apartment_finder = function(site) {
 
@@ -16,12 +16,12 @@ apartment_finder = function(site) {
                         html_node(node) %>% 
                         html_text()
                     }
-#total count
-review_count = extract_info('script[type="application/ld+json"]') %>% 
-               str_extract_all(., "reviewRating") %>% 
-               unlist() %>% 
-               length() %>% 
-               as.numeric()
+# #total count
+# review_count = extract_info('script[type="application/ld+json"]') %>% 
+#                str_extract_all(., "reviewRating") %>% 
+#                unlist() %>% 
+#                length() %>% 
+#                as.numeric()
 
 #count and average score
 review_score = extract_info('script[type="application/ld+json"]') %>% 
@@ -50,11 +50,33 @@ floor_plan = site %>%
   html_text()
 
 #rent
-rent = site %>%
+rent.raw = site %>%
   read_html() %>%
-  html_nodes('div[class="floor-detail-row-rent"]') %>% 
-  html_text() %>% 
-  as.numeric()
+  html_nodes('#floorplans .widget') %>% 
+  html_text()
+  # str_extract_all("\\$[\\d{1,}|,]") %>% 
+  # unlist() %>% 
+  # str_replace_all("\\$", "") %>% 
+  # as.numeric()
+
+split_rent = unlist(str_split(rent.raw, "Bathroom"), recursive = FALSE) %>% 
+  .[str_detect(.,"Price")]
+
+num_rent = unlist(lapply(split_rent,
+                          function(i) str_extract_all(str_replace_all(i, ",", ""), "\\$\\d{3,}")),
+                   recursive = FALSE) %>% 
+  lapply(., function(i) str_replace_all(i, "\\$", ""))
+
+rent_mean = unlist(lapply(num_rent, function(i) mean(as.numeric(i)))) %>% 
+  .[!is.nan(.)]
+
+if(length(rent_mean) != length(floor_plan)) {
+  rent = rep(NA, length(floor_plan))
+} else {
+  rent = rent_mean
+}
+
+
 
 #image 
 image_url = site %>%
@@ -68,6 +90,8 @@ image_url = site %>%
   .[1] %>% 
   paste0("http:", .)
 
+if(str_detect(image_url, "A$")) image_url = NA
+
 #distance to chapel
 chapel = c(-78.9424706, 36.0018988)
 distance = round(distm(lon_lat, chapel, fun = distHaversine)[1]) %>% 
@@ -79,15 +103,29 @@ floor = site %>%
   html_nodes('#floorplans .widget') %>% 
   html_text()
 
-split_floor = unlist(str_split(floor, "\\d Bedrooms, \\d Bathroom"), recursive = FALSE)
+split_floor = unlist(str_split(floor, "\\d Bathroom"), recursive = FALSE)
 
 num_floor = unlist(lapply(split_floor,
                           function(i) str_extract_all(str_replace_all(i, ",", ""), "\\.\\d{3,}")),
                    recursive = FALSE) %>% 
   lapply(., function(i) str_replace_all(i, "\\.", ""))
 
-floor_mean = unlist(lapply(num_floor, function(i) mean(as.numeric(i))))
-floor_mean_clean = floor_mean[!is.nan(floor_mean)]
+floor_mean = unlist(lapply(num_floor, function(i) mean(as.numeric(i)))) %>% 
+  .[!is.na(.)]
+  
+
+if(length(floor_mean) != length(floor_plan)) {
+ floor_mean_clean = rep(NA, length(floor_plan))
+} else {
+  floor_mean_clean = floor_mean
+}
+
+
+info_list = list(apt_name, floor_plan, floor, distance, rent, review_score, floor_mean_clean)
+
+if(any(lengths(info_list) == 0 | sapply(info_list, function(i) any(is.na(i)))) | ncol(review_score) == 1) {
+  df.final = NA
+} else {
 
 #generate final dataframe
 df.final =  as.data.frame(cbind(apt_name, image_url), 
@@ -97,6 +135,7 @@ df.final =  as.data.frame(cbind(apt_name, image_url),
 
 colnames(df.final) = c("name", "image", "plan", "rent", 
                        "size", "review_count", "avg_review","distance")
+}
 
 #different score
 
