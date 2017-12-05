@@ -6,7 +6,7 @@ library(geosphere)
 library(dplyr)
 
 
-site = "webURLS/web3.htm"
+site = "webURLs/web24.htm"
 
 apartment_finder = function(site) {
 
@@ -25,11 +25,10 @@ apartment_finder = function(site) {
 
 #count and average score
 review_score = extract_info('script[type="application/ld+json"]') %>% 
-  str_extract_all('"reviewCount": "\\d+|"ratingValue": "\\d\\.\\d') %>% 
-  str_extract_all("\\d\\.\\d|\\d+") %>% 
-  unlist() %>% 
-  as.numeric() %>% 
-  t()
+  str_match_all('ratingValue":\\s.(\\d)"')%>% 
+  .[[1]]%>% # we know that it will only return one list from each page
+  .[,2]%>% # second column is the part inside bracket we need
+  as.numeric()
 
 #lon and lat
 lon_lat = site %>%
@@ -125,9 +124,9 @@ distance = round(distm(lon_lat, chapel, fun = distHaversine)[1]) %>%
 # }
 
 
-info_list = list(apt_name, floor_plan, floor, distance, rent, review_score)#, floor_mean_clean)
+info_list = list(apt_name, distance, rent, review_score,floor_plan)#, floor_mean_clean, floor_plan, floor,)
 
-if(any(lengths(info_list) == 0 | sapply(info_list, function(i) any(is.na(i)))) | ncol(review_score) == 1) {
+if(any(lengths(info_list) == 0 | sapply(info_list, function(i) any(is.na(i))))|length(review_score)==0) {
   df.final = NA
 } else {
 
@@ -135,13 +134,14 @@ if(any(lengths(info_list) == 0 | sapply(info_list, function(i) any(is.na(i)))) |
 df.final =  as.data.frame(cbind(apt_name, image_url), 
                           stringsAsFactors = FALSE) %>% 
   slice(rep(1:n(), length(floor_plan))) %>% 
-  cbind(floor_plan, rent, 
+  slice(rep(1:n(),length(review_score)))%>%
+  cbind( rent, floor_plan,
         #floor_mean_clean,
         review_score, distance, lon_lat)
 
-colnames(df.final) = c("name", "image", "plan", "rent", 
+colnames(df.final) = c("name", "image", "rent","plan",
                        #"size", 
-                       "review_count", "avg_review","distance", "lon", "lat")
+                       "review","distance", "lon", "lat")
 }
 
 #different score
@@ -158,8 +158,10 @@ load("urls.Rdata")
 apt.df = data.frame()
 
 for (i in seq_len(133)) {
-  apt.df = apt.df %>%
-    rbind(apartment_finder(paste0("webURLs/web", i, ".htm")))
+  df = apartment_finder(paste0("webURLs/web", i, ".htm"))
+  if(!is.na(df)){
+    apt.df = rbind(apt.df,cbind(df,urls[i]))
+  }
 }
 
 test.df = apt.df %>% 
