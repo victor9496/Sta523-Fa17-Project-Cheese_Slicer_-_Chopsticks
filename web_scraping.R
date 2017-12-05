@@ -100,31 +100,31 @@ chapel = c(-78.9424706, 36.0018988)
 distance = round(distm(lon_lat, chapel, fun = distHaversine)[1]) %>% 
   as.numeric()
 
-#calculate average floor size
-floor = site %>%
-  read_html() %>%
-  html_nodes('#floorplans .widget') %>% 
-  html_text()
+# #calculate average floor size
+# floor = site %>%
+#   read_html() %>%
+#   html_nodes('#floorplans .widget') %>% 
+#   html_text()
+# 
+# split_floor = unlist(str_split(floor, "\\d Bathroom"), recursive = FALSE)
+# 
+# num_floor = unlist(lapply(split_floor,
+#                           function(i) str_extract_all(str_replace_all(i, ",", ""), "\\.\\d{3,}")),
+#                    recursive = FALSE) %>% 
+#   lapply(., function(i) str_replace_all(i, "\\.", ""))
+# 
+# floor_mean = unlist(lapply(num_floor, function(i) mean(as.numeric(i)))) %>% 
+#   .[!is.na(.)]
+#   
+# 
+# if(length(floor_mean) != length(floor_plan)) {
+#  floor_mean_clean = rep(NA, length(floor_plan))
+# } else {
+#   floor_mean_clean = floor_mean
+# }
 
-split_floor = unlist(str_split(floor, "\\d Bathroom"), recursive = FALSE)
 
-num_floor = unlist(lapply(split_floor,
-                          function(i) str_extract_all(str_replace_all(i, ",", ""), "\\.\\d{3,}")),
-                   recursive = FALSE) %>% 
-  lapply(., function(i) str_replace_all(i, "\\.", ""))
-
-floor_mean = unlist(lapply(num_floor, function(i) mean(as.numeric(i)))) %>% 
-  .[!is.na(.)]
-  
-
-if(length(floor_mean) != length(floor_plan)) {
- floor_mean_clean = rep(NA, length(floor_plan))
-} else {
-  floor_mean_clean = floor_mean
-}
-
-
-info_list = list(apt_name, floor_plan, floor, distance, rent, review_score, floor_mean_clean)
+info_list = list(apt_name, floor_plan, floor, distance, rent, review_score)#, floor_mean_clean)
 
 if(any(lengths(info_list) == 0 | sapply(info_list, function(i) any(is.na(i)))) | ncol(review_score) == 1) {
   df.final = NA
@@ -134,10 +134,13 @@ if(any(lengths(info_list) == 0 | sapply(info_list, function(i) any(is.na(i)))) |
 df.final =  as.data.frame(cbind(apt_name, image_url), 
                           stringsAsFactors = FALSE) %>% 
   slice(rep(1:n(), length(floor_plan))) %>% 
-  cbind(floor_plan, rent, floor_mean_clean, review_score, distance)
+  cbind(floor_plan, rent, 
+        #floor_mean_clean,
+        review_score, distance)
 
 colnames(df.final) = c("name", "image", "plan", "rent", 
-                       "size", "review_count", "avg_review","distance")
+                       #"size", 
+                       "review_count", "avg_review","distance")
 }
 
 #different score
@@ -148,6 +151,16 @@ colnames(df.final) = c("name", "image", "plan", "rent",
 #   html_text() 
 
 return(df.final)
-
 }
 
+load("urls.Rdata")
+apt.df = data.frame()
+
+for (i in seq_len(133)) {
+  apt.df = apt.df %>%
+    rbind(apartment_finder(paste0("webURLs/web", i, ".htm")))
+}
+
+df.complete = apt.df[rowSums(is.na(apt.df)) > 0,]
+
+save(df.complete, file="df_complete.Rdata")
