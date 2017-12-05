@@ -6,7 +6,7 @@ library(geosphere)
 library(dplyr)
 
 
-site = "webURLS/web130.htm"
+site = "webURLS/web3.htm"
 
 apartment_finder = function(site) {
 
@@ -39,6 +39,9 @@ lon_lat = site %>%
   str_extract_all("-?\\d+\\.\\d+") %>% 
   unlist() %>% 
   as.numeric()
+
+if(length(lon_lat) != 2) lon_lat = rep(NA,2)
+
 
 #apartment name
 apt_name = extract_info('.last span')
