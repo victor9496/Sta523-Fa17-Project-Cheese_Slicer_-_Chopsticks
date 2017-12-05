@@ -38,7 +38,8 @@ lon_lat = site %>%
   str_extract_all("\\[\\'longitude\\'\\] = '-\\d+\\.\\d+|\\[\\'latitude\\'\\] = '\\d+\\.\\d+") %>%  
   str_extract_all("-?\\d+\\.\\d+") %>% 
   unlist() %>% 
-  as.numeric()
+  as.numeric() %>% 
+  t()
 
 if(length(lon_lat) != 2) lon_lat = rep(NA,2)
 
@@ -136,11 +137,11 @@ df.final =  as.data.frame(cbind(apt_name, image_url),
   slice(rep(1:n(), length(floor_plan))) %>% 
   cbind(floor_plan, rent, 
         #floor_mean_clean,
-        review_score, distance)
+        review_score, distance, lon_lat)
 
 colnames(df.final) = c("name", "image", "plan", "rent", 
                        #"size", 
-                       "review_count", "avg_review","distance")
+                       "review_count", "avg_review","distance", "lon", "lat")
 }
 
 #different score
@@ -161,6 +162,10 @@ for (i in seq_len(133)) {
     rbind(apartment_finder(paste0("webURLs/web", i, ".htm")))
 }
 
-df.complete = apt.df[rowSums(is.na(apt.df)) > 0,]
+test.df = apt.df %>% 
+  select(-image)
+
+
+df.complete = apt.df[!rowSums(is.na(test.df)) > 0,]
 
 save(df.complete, file="df_complete.Rdata")
