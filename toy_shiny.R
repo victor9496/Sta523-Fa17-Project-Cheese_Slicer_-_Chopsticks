@@ -268,3 +268,6 @@ hi = c('red', 'darkred', 'lightred', 'orange', 'beige', 'green', 'darkgreen', 'l
 leaflet(data = df.20) %>% clearShapes() %>% addTiles() %>%
   addAwesomeMarkers(
     ~long, ~lat, icon=icons)
+
+##################pop up image###########################
+https://groups.google.com/forum/#!topic/shiny-discuss/1V4idLSjaBs
