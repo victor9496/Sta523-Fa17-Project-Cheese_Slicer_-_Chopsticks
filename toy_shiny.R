@@ -250,3 +250,21 @@ observe({
 })
 }
 )
+
+#########################color example#########################
+icons <- awesomeIcons(
+  icon = 'ios-close',
+  iconColor = 'black',
+  library = 'ion',
+  fontFamily = "system-ui",
+  text = gettext(),
+  markerColor = sample(hi, 10)
+)
+
+
+hi = c('red', 'darkred', 'lightred', 'orange', 'beige', 'green', 'darkgreen', 'lightgreen', 'blue', 'darkblue', 'lightblue', 'purple', 'darkpurple', 'pink', 'cadetblue', 'white', 'gray', 'lightgray', 'black')
+
+
+leaflet(data = df.20) %>% clearShapes() %>% addTiles() %>%
+  addAwesomeMarkers(
+    ~long, ~lat, icon=icons)
