@@ -1,5 +1,12 @@
 library(shiny)
 library(leaflet)
+
+#for demonstrate 
+# purl = urls[1:125]
+#old df.complete with 125 rows
+# df.complete = cbind(df.complete, purl)
+
+
 shinyApp(
   ui <-bootstrapPage(
     
@@ -30,12 +37,13 @@ shinyApp(
                                     selected = "1 Bedrooms, 1 Bathroom"),
                         h4("Uncertianty"),
                         sliderInput("uncertainty",label=NULL, min=0.1, max=0.75, 
-                                    value=0.25, step=0.1)
+                                    value=0.25, step=0.1),
+                        actionButton("search", label = "Search")
                         
           ),
           
           tags$div(id="cite",
-                   'Data compiled for ', tags$em('Coming Apart: The State of White America, 1960–2010'), ' by Charles Murray (Crown Forum, 2012).'
+                   'Data compiled for ', tags$em('Coming Apart: Copyright © 2017 Apartmentratings.com')
           )
       )
     ),
@@ -48,38 +56,36 @@ shinyApp(
     #create map
     output$map <- renderLeaflet({
       leaflet() %>%
-        addTiles(
-          # urlTemplate = "//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
-          # attribution = 'Maps by <a href="http://www.mapbox.com/">Mapbox</a>'
-        ) %>%
+        addTiles() %>%
         setView(lng = -78.8986, lat = 35.9940, zoom = 12) #-78.8986 35.9940
     })
     
-    new_df = reactive({
-      df.complete %>%
-      dplyr::filter(plan == input$var) %>%
-      dplyr::arrange(desc(avg_review)) %>%
-      head(n = input$top)})
-
     
-    
-    zipsInBounds <- reactive({
-      if (is.null(input$map_bounds))
-        return(zipdata[FALSE,])
-      bounds <- input$map_bounds
-      latRng <- range(bounds$north, bounds$south)
-      lngRng <- range(bounds$east, bounds$west)
+   
+    #  small_df = reactive({
+    #   if (is.null(input$map_bounds))
+    #     return(df.complete[FALSE,])
+    #   bounds <- input$map_bounds
+    #   latRng <- range(bounds$north, bounds$south)
+    #   lngRng <- range(bounds$east, bounds$west)
+    #   
+    #   subset(new_df(),
+    #          lat >= latRng[1] & lat <= latRng[2] &
+    #            lon >= lngRng[1] & lon <= lngRng[2])
+    # })
 
-      subset(new_df(),
-             lat >= latRng[1] & lat <= latRng[2] &
-               lon >= lngRng[1] & lon <= lngRng[2])
-    })
-
-
-    observe({
-      col_var = c('red', 'darkred', 'lightred', 'orange', 'beige', 'green',
-                  'lightgreen', 'blue',  'lightblue', 'purple',  'pink',
-                  'cadetblue', 'white', 'gray', 'lightgray')
+    observeEvent(input$search, {
+      
+      new_df = reactive({
+        df.complete %>%
+          dplyr::filter(plan == input$var) %>%
+          #change need!
+          # dplyr::arrange(desc(avg_review)) %>%
+          head(n = input$top)})
+      
+      col_var = c('red', 'white', 'lightblue', 'orange', 'beige', 'green',
+                  'lightgreen', 'blue',  'lightred', 'purple',  'pink',
+                  'cadetblue',  'darkred','gray', 'lightgray')
 
 
       icons <- awesomeIcons(
@@ -88,33 +94,27 @@ shinyApp(
         library = 'ion',
         fontFamily = "system-ui",
         text = 1:input$top,
-        markerColor = sample(col_var)
+        markerColor = col_var[1:input$top]
       )
 
-      leafletProxy("map", data = new_df()) %>%
+      
+      content <- paste0(
+                       "<b><a href=",new_df()$purl,">",new_df()$name,"</a></b><br/>",
+                       "Floor_plan: ",new_df()$plan,"<br/>",
+                       "Rent: ",round(new_df()$rent),"<br/>",
+                       "<img src=", new_df()$image, " height = '200', width = '200'>")
+    
+    
+      
+      leafletProxy("map") %>%
         clearShapes() %>%
         addAwesomeMarkers(
-          ~lon, ~lat, icon=icons)
+          new_df()$lon, new_df()$lat, icon=icons, 
+          popup = content)
     })
     
    
-    #  showZipcodePopup <- function(plan, lat, lng) {
-    #   selected <- df.complete()[df.complete()$plan == plan,]
-    #   content <- as.character(tagList(
-    #     tags$h4("Score:", as.integer(selected$avg_review)),
-    #     # tags$strong(HTML(sprintf("%s, %s %s",
-    #     #                          selectedZip$city.x, selectedZip$state.x, selectedZip$zipcode
-    #     # ))), tags$br(),
-    #     # sprintf("Median household income: %s", dollar(selectedZip$income * 1000)), tags$br(),
-    #     # sprintf("Percent of adults with BA: %s%%", as.integer(selectedZip$college)), tags$br(),
-    #     # sprintf("Adult population: %s", selectedZip$adultpop), tags$br(),
-    #     tags$a(href = "http://www.baidu.com", 
-    #            "baidu", target="_blank"), tags$br(),
-    #     tags$img(src = "https://static1.squarespace.com/static/51156277e4b0b8b2ffe11c00/t/583ccafcbebafbc5c11fa6ec/1480379239088/RStudio-Ball.png", width = "200px", height = "200px")
-    #   ))
-    #   leafletProxy("map") %>% addPopups(lng, lat, content, layerId = plan)
-    # }
-    #  
+    
     #  observe({
     #    leafletProxy("map") %>% clearPopups()
     #    event <- input$map_shape_click
