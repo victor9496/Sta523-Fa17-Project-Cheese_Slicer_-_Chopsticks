@@ -37,8 +37,7 @@ shinyApp(
                                     selected = "1 Bedrooms, 1 Bathroom"),
                         h4("Uncertianty"),
                         sliderInput("uncertainty",label=NULL, min=0.1, max=0.75, 
-                                    value=0.25, step=0.1),
-                        actionButton("search", label = "Search")
+                                    value=0.25, step=0.1)
                         
           ),
           
@@ -54,11 +53,12 @@ shinyApp(
   
   server <- function(input, output, session) {
     #create map
-    output$map <- renderLeaflet({
-      leaflet() %>%
-        addTiles() %>%
-        setView(lng = -78.8986, lat = 35.9940, zoom = 12) #-78.8986 35.9940
-    })
+    
+    # output$map <- renderLeaflet({
+    #   leaflet() %>%
+    #     addTiles() %>%
+    #     setView(lng = -78.8986, lat = 35.9940, zoom = 12) #-78.8986 35.9940
+    # })
     
     
    
@@ -74,7 +74,7 @@ shinyApp(
     #            lon >= lngRng[1] & lon <= lngRng[2])
     # })
 
-    observeEvent(input$search, {
+    observe({
       
       new_df = reactive({
         df.complete %>%
@@ -106,26 +106,18 @@ shinyApp(
     
     
       
-      leafletProxy("map") %>%
+      output$map <- renderLeaflet({
+        leaflet() %>%
+          addTiles() %>%
         clearShapes() %>%
         addAwesomeMarkers(
           new_df()$lon, new_df()$lat, icon=icons, 
           popup = content)
     })
     
-   
-    
-    #  observe({
-    #    leafletProxy("map") %>% clearPopups()
-    #    event <- input$map_shape_click
-    #    if (is.null(event))
-    #      return()
-    #    
-    #    isolate({
-    #      showZipcodePopup(event$id, event$lat, event$lng)
-    #    })
-    #  })
-    #  
+    })
+  }
+)
     #  observe({
     #    if (is.null(input$goto))
     #      return()
@@ -140,6 +132,4 @@ shinyApp(
     #      map %>% fitBounds(lng - dist, lat - dist, lng + dist, lat + dist)
     #    })
     #  })
-     
-  }
-)
+  
