@@ -5,7 +5,7 @@ library(leaflet)
 # purl = urls[1:125]
 #old df.complete with 125 rows
 # df.complete = cbind(df.complete, purl)
-
+load("data_shiny.Rdata")
 
 shinyApp(
   ui <-bootstrapPage(
