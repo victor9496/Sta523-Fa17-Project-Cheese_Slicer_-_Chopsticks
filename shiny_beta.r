@@ -1,11 +1,13 @@
 library(shiny)
 library(leaflet)
+library(dplyr)
 
 #for demonstrate 
 # purl = urls[1:125]
 #old df.complete with 125 rows
 # df.complete = cbind(df.complete, purl)
 load("df_complete.Rdata")
+colnames(df.complete)[grepl("url",colnames(df.complete))] = "purl"
 shinyApp(
   ui <-bootstrapPage(
     
@@ -60,7 +62,7 @@ shinyApp(
     # })
     
     
-   
+    
     #  small_df = reactive({
     #   if (is.null(input$map_bounds))
     #     return(df.complete[FALSE,])
@@ -72,7 +74,7 @@ shinyApp(
     #          lat >= latRng[1] & lat <= latRng[2] &
     #            lon >= lngRng[1] & lon <= lngRng[2])
     # })
-
+    
     observe({
       
       new_df = reactive({
@@ -95,15 +97,15 @@ shinyApp(
         #return_df = merge(rank_df,df.complete,by = c("name","plan"))
         #return_df = return_df[!duplicated(return_df$name),]
         #return_df %>%arrange(desc(val))
-          #change need!
-          # dplyr::arrange(desc(avg_review)) %>%
-        })
+        #change need!
+        # dplyr::arrange(desc(avg_review)) %>%
+      })
       #isolate(new_df$name)
       col_var = c('red', 'white', 'lightblue', 'orange', 'beige', 'green',
                   'lightgreen', 'blue',  'lightred', 'purple',  'pink',
                   'cadetblue',  'darkred','gray', 'lightgray')
-
-
+      
+      
       icons <- awesomeIcons(
         icon = 'ios-close',
         iconColor = 'black',
@@ -112,40 +114,39 @@ shinyApp(
         text = 1:input$top,
         markerColor = col_var[1:input$top]
       )
-
+      
       
       content <- paste0(
-                       "<b><a href=",new_df()$purl,">",new_df()$name,"</a></b><br/>",
-                       "Floor_plan: ",new_df()$plan,"<br/>",
-                       "Rent: ",round(new_df()$rent),"<br/>",
-                       "<img src=", new_df()$image, " height = '200', width = '200'>")
-    
-    
+        "<b><a href=",new_df()$purl,">",new_df()$name,"</a></b><br/>",
+        "Floor_plan: ",new_df()$plan,"<br/>",
+        "Rent: ",round(new_df()$rent),"<br/>",
+        "<img src=", new_df()$image, " height = '200', width = '200'>")
+      
+      
       
       output$map <- renderLeaflet({
         leaflet() %>%
           addTiles() %>%
-        clearShapes() %>%
-        addAwesomeMarkers(
-          new_df()$lon, new_df()$lat, icon=icons, 
-          popup = content)
-    })
-    
+          clearShapes() %>%
+          addAwesomeMarkers(
+            new_df()$lon, new_df()$lat, icon=icons, 
+            popup = content)
+      })
+      
     })
   }
 )
-    #  observe({
-    #    if (is.null(input$goto))
-    #      return()
-    #    isolate({
-    #      map <- leafletProxy("map")
-    #      map %>% clearPopups()
-    #      dist <- 0.5
-    #      zip <- input$goto$zip
-    #      lat <- input$goto$lat
-    #      lng <- input$goto$lng
-    #      showZipcodePopup(zip, lat, lng)
-    #      map %>% fitBounds(lng - dist, lat - dist, lng + dist, lat + dist)
-    #    })
-    #  })
-  
+#  observe({
+#    if (is.null(input$goto))
+#      return()
+#    isolate({
+#      map <- leafletProxy("map")
+#      map %>% clearPopups()
+#      dist <- 0.5
+#      zip <- input$goto$zip
+#      lat <- input$goto$lat
+#      lng <- input$goto$lng
+#      showZipcodePopup(zip, lat, lng)
+#      map %>% fitBounds(lng - dist, lat - dist, lng + dist, lat + dist)
+#    })
+#  })
