@@ -1,8 +1,9 @@
 load("df_complete.Rdata")
 plans = unique(df.complete$plan)
+library(R2jags)
 get_df = function(pl){
   df = df.complete%>%filter(plan == pl)
-  library(R2jags)
+
   
   cat("data{
       for(i.aprt in 1:n.aprt){ # this i.aprt represents the number of apartments
@@ -52,7 +53,7 @@ get_df = function(pl){
   label_prob = outj$BUGSoutput$sims.matrix[,grepl("P",colnames(outj$BUGSoutput$sims.matrix))]
   #save(label_prob, file="labels.Rdata")
   
-  classprb = lapply(0:5,function(i) label_prob[,cumsum(table(factor(df$name, levels=unique(df$name))))+6618*i])
+  classprb = lapply(0:5,function(i) label_prob[,cumsum(table(factor(df$name, levels=unique(df$name))))+nrow(df)*i])
   for (i in seq_along(classprb)){
     colnames(classprb[[i]])  = unique(df$name)
   }
