@@ -77,11 +77,16 @@ shinyApp(
     observe({
       
       new_df = reactive({
-        df.complete %>%
-          dplyr::filter(plan == input$var) %>%
+        df = get(load(paste0("classprb",gsub(" ","",input$var),".Rdata")))
+        rm(classprb)
+        samps = sapply(df,function(x) apply(x,2,function(i) quantile(i,input$uncertainty)))
+        weighted_mean = apply(samps,1,function(x) weighted.mean(0:5,x))
+        val = sort(weighted_mean,decreasing = TRUE)[1:input$top]
+        rank_df = data.frame(name = names(val),val)
+        merge(rank_df,df.complete,by = "name")
           #change need!
           # dplyr::arrange(desc(avg_review)) %>%
-          head(n = input$top)})
+        })
       
       col_var = c('red', 'white', 'lightblue', 'orange', 'beige', 'green',
                   'lightgreen', 'blue',  'lightred', 'purple',  'pink',
