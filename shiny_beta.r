@@ -28,9 +28,9 @@ shinyApp(
                         h4("Top5-Top15"),
                         sliderInput("top", label=NULL,min = 5, max = 15,value=5, step=1),
                         h4("Price Range"),
-                        radioButtons("price",label="Below:",choices= c("500", "700", "1000")),
+                        sliderInput("price", label="Below", min=500, max=2000, value=1000, step=100),
                         h4("Distance"),
-                        sliderInput("distance", label="Below", min=1, max=10, value=5, step=0.1),
+                        sliderInput("distance", label="Below", min=2000, max=20000, value=10000, step=2000),
                         h4("Floor_plan"),
                         selectInput("var", "Below", choices = unique(df.complete$plan), 
                                     selected = "1 Bedrooms, 1 Bathroom"),
@@ -76,19 +76,29 @@ shinyApp(
     observe({
       
       new_df = reactive({
+        # input = data.frame(var="1 Bedrooms, 1 Bathroom",uncertainty = 0.3,price = 900,distance=10000,top = 5)
         df = get(load(paste0("classprb",gsub(" ","",input$var),".Rdata")))
         rm(classprb)
         samps = sapply(df,function(x) apply(x,2,function(i) quantile(i,input$uncertainty)))
         weighted_mean = apply(samps,1,function(x) weighted.mean(0:5,x))
-        val = sort(weighted_mean,decreasing = TRUE)[1:input$top]
-        rank_df = data.frame(name = names(val),val,plan = input$var)
-        return_df = merge(rank_df,df.complete,by = c("name","plan"))
-        return_df = return_df[!duplicated(return_df$name),]
-        return_df %>%arrange(desc(val))
+        weighted_mean = data.frame(name = names(weighted_mean),val = weighted_mean,plan = input$var)
+        return_df = merge(weighted_mean,df.complete,by = c("name","plan"))
+        return_df = return_df%>%
+          filter(!duplicated(name))%>%
+          filter(rent<input$price)%>%
+          filter(distance<input$distance)%>%
+          arrange(desc(val))%>%
+          slice(1:input$top)
+        return_df
+        #val = sort(weighted_mean,decreasing = TRUE)[1:input$top]
+        #rank_df = data.frame(name = names(val),val,plan = input$var)
+        #return_df = merge(rank_df,df.complete,by = c("name","plan"))
+        #return_df = return_df[!duplicated(return_df$name),]
+        #return_df %>%arrange(desc(val))
           #change need!
           # dplyr::arrange(desc(avg_review)) %>%
         })
-      
+      #isolate(new_df$name)
       col_var = c('red', 'white', 'lightblue', 'orange', 'beige', 'green',
                   'lightgreen', 'blue',  'lightred', 'purple',  'pink',
                   'cadetblue',  'darkred','gray', 'lightgray')
