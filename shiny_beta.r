@@ -135,25 +135,16 @@ shinyApp(
         # dplyr::arrange(desc(avg_review)) %>%
       })
       #isolate(new_df$name)
-      print(nrow(new_df()))
+      # print(nrow(new_df()))
       
       
-      id <- NULL
-      
-      observeEvent(nrow(new_df()) == 0, {
-        # If there's currently a notification, don't add another
-        if (!is.null(id))
-          return()
-        # Save the ID for removal later
-        id <<- showNotification(paste("Notification message"), duration = 10)
-      
-      })
-      
-      # observeEvent(nrow(new_df()) != 0, {
-      #   if (!is.null(id))
-      #     removeNotification(id)
-      #   id <<- NULL
-      # })
+      if(nrow(new_df()) == 0) {
+        showModal(modalDialog(
+          title = "Important message",
+          "This is an important message!"
+        ))
+      }
+    
       
       
       
