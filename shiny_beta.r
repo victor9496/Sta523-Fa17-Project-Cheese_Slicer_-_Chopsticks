@@ -8,6 +8,9 @@ library(dplyr)
 # df.complete = cbind(df.complete, purl)
 load("df_complete.Rdata")
 colnames(df.complete)[grepl("url",colnames(df.complete))] = "purl"
+df.complete$image = df.complete$image %>%ifelse(is.na(.),"https://www.internetbrands.com/wp-content/uploads/2014/05/hometravel_aptrating_2x.png"
+        ,.)
+
 shinyApp(
   ui <-bootstrapPage(
     
@@ -91,6 +94,8 @@ shinyApp(
           filter(distance<input$distance)%>%
           arrange(desc(val))%>%
           slice(1:input$top)
+        
+
         return_df
         #val = sort(weighted_mean,decreasing = TRUE)[1:input$top]
         #rank_df = data.frame(name = names(val),val,plan = input$var)
