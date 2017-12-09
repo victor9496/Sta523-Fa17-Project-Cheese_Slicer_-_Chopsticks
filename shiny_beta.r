@@ -10,6 +10,22 @@ load("df_complete.Rdata")
 colnames(df.complete)[grepl("url",colnames(df.complete))] = "purl"
 df.complete$image = df.complete$image %>%ifelse(is.na(.),"https://www.internetbrands.com/wp-content/uploads/2014/05/hometravel_aptrating_2x.png"
         ,.)
+per_room = df.complete$plan %>% 
+  gsub("Studio", "1 Bedrooms", .) %>% 
+  str_extract_all("\\d Bedrooms") %>% 
+  unlist() %>% 
+  str_extract_all("\\d") %>% 
+  unlist() %>% 
+  as.numeric()
+df.complete$rent = df.complete$rent / per_room
+
+df.complete$distance = df.complete$distance/ 1000
+
+plan_list = list.files(path = ".", pattern = "class.*\\.Rdata", all.files = FALSE,
+                       full.names = FALSE, recursive = FALSE,
+                       ignore.case = FALSE, include.dirs = FALSE, no.. = FALSE) %>% 
+                       str_extract( "\\dBedrooms,\\dBathroom(s)?|Studio,\\dBathroom")
+
 
 shinyApp(
   ui <-bootstrapPage(
@@ -31,13 +47,18 @@ shinyApp(
                         width = 330, height = "auto",
                         
                         h4("Top5-Top15"),
-                        sliderInput("top", label=NULL,min = 5, max = 15,value=5, step=1),
+                        radioButtons("top", "Distribution type:",
+                                     choices = c("5" ,"10","15"),
+                                     selected = "5"),
                         h4("Price Range"),
-                        sliderInput("price", label="Below", min=500, max=2000, value=1000, step=100),
+                        selectInput("price", "Below", 
+                                    choices = c(550,600, 650, 700, 800,
+                                                "Above 800"), selected = "700"),
                         h4("Distance"),
-                        sliderInput("distance", label="Below", min=2000, max=20000, value=10000, step=2000),
+                        selectInput("distance", label="Below", 
+                                    choices = c(2*1:4, "Above 10"), selected = "8"),
                         h4("Floor_plan"),
-                        selectInput("var", "Below", choices = unique(df.complete$plan), 
+                        selectInput("var", "Below", choices = plan_list, 
                                     selected = "1 Bedrooms, 1 Bathroom"),
                         h4("Uncertianty"),
                         sliderInput("uncertainty",label=NULL, min=0.1, max=0.75, 
@@ -81,19 +102,27 @@ shinyApp(
     observe({
       
       new_df = reactive({
-        # input = data.frame(var="1 Bedrooms, 1 Bathroom",uncertainty = 0.3,price = 900,distance=10000,top = 5)
-        df = get(load(paste0("classprb",gsub(" ","",input$var),".Rdata")))
+        # input = data.frame(var="1Bedrooms,1Bathroom",uncertainty = 0.3,price = 900,distance=10000,top = 5)
+        price = input$price
+        dist = input$distance
+        if(dist == "Above 10") dist = 30
+        if(price == "Above 800") price = 2000
+        
+        floor_plan = gsub("(\\d)(\\w)","\\1 \\2",input$var) %>% 
+          gsub(",", ", ", .)
+        
+        df = get(load(paste0("classprb",input$var,".Rdata")))
         rm(classprb)
         samps = sapply(df,function(x) apply(x,2,function(i) quantile(i,input$uncertainty)))
         weighted_mean = apply(samps,1,function(x) weighted.mean(0:5,x))
-        weighted_mean = data.frame(name = names(weighted_mean),val = weighted_mean,plan = input$var)
+        weighted_mean = data.frame(name = names(weighted_mean),val = weighted_mean,plan = floor_plan)
         return_df = merge(weighted_mean,df.complete,by = c("name","plan"))
         return_df = return_df%>%
           filter(!duplicated(name))%>%
-          filter(rent<input$price)%>%
-          filter(distance<input$distance)%>%
+          filter(rent< as.numeric(price))%>%
+          filter(distance< as.numeric(dist))%>%
           arrange(desc(val))%>%
-          slice(1:input$top)
+          slice(1:as.numeric(input$top))
         
 
         return_df
@@ -106,6 +135,28 @@ shinyApp(
         # dplyr::arrange(desc(avg_review)) %>%
       })
       #isolate(new_df$name)
+      print(nrow(new_df()))
+      
+      
+      id <- NULL
+      
+      observeEvent(nrow(new_df()) == 0, {
+        # If there's currently a notification, don't add another
+        if (!is.null(id))
+          return()
+        # Save the ID for removal later
+        id <<- showNotification(paste("Notification message"), duration = 10)
+      
+      })
+      
+      # observeEvent(nrow(new_df()) != 0, {
+      #   if (!is.null(id))
+      #     removeNotification(id)
+      #   id <<- NULL
+      # })
+      
+      
+      
       col_var = c('red', 'white', 'lightblue', 'orange', 'beige', 'green',
                   'lightgreen', 'blue',  'lightred', 'purple',  'pink',
                   'cadetblue',  'darkred','gray', 'lightgray')
