@@ -5,8 +5,7 @@ library(leaflet)
 # purl = urls[1:125]
 #old df.complete with 125 rows
 # df.complete = cbind(df.complete, purl)
-load("data_shiny.Rdata")
-
+load("df_complete.Rdata")
 shinyApp(
   ui <-bootstrapPage(
     
@@ -82,8 +81,10 @@ shinyApp(
         samps = sapply(df,function(x) apply(x,2,function(i) quantile(i,input$uncertainty)))
         weighted_mean = apply(samps,1,function(x) weighted.mean(0:5,x))
         val = sort(weighted_mean,decreasing = TRUE)[1:input$top]
-        rank_df = data.frame(name = names(val),val)
-        merge(rank_df,df.complete,by = "name")
+        rank_df = data.frame(name = names(val),val,plan = input$var)
+        return_df = merge(rank_df,df.complete,by = c("name","plan"))
+        return_df = return_df[!duplicated(return_df$name),]
+        return_df %>%arrange(desc(val))
           #change need!
           # dplyr::arrange(desc(avg_review)) %>%
         })
