@@ -1,6 +1,8 @@
 load("df_complete.Rdata")
 plans = unique(df.complete$plan)
 library(R2jags)
+#library(nnet)
+#summary(multinom(review ~ rent + distance, data = df.complete))
 get_df = function(pl){
   df = df.complete%>%filter(plan == pl)
 
@@ -28,24 +30,24 @@ get_df = function(pl){
       # random effect
       for(i.cut in 1:n.cut){ # Z[i,]: dim 1*5
       logit(Q[i,i.cut]) <- Z[i,i.cut]
-      Z[i,i.cut] <- b1*distance[i] + b2*rent[i]  - C[(aprt[i]),i.cut] 
+      Z[i,i.cut] <- b1*distance[i] + b2*rent[i] - C[(aprt[i]),i.cut] 
       }
       }
       # priors
-      b1 ~ dnorm(0,0.01)
+      b1 ~ dnorm(0.0,0.01)
       b2 ~ dnorm(0,0.01)
       for(i.aprt in 1:n.aprt){ # C[i.aprt,] : dim 1*5
       C[i.aprt,1:5] <- sort(C0[i.aprt,])
       }
       }", fill=TRUE, file="reorderedlogit.txt")
   #unload.module("glm")
-  jags_data = list(Y =as.numeric(df$review)+1, distance =as.numeric(df$distance),
-                   rent = as.numeric(df$rent),n.cut = (length(unique(df$review))-1), 
+  jags_data = list(Y =as.numeric(df$review)+1, distance =as.numeric(scale(df$distance)),
+                   rent = as.numeric(scale(df$rent)),n.cut = (length(unique(df$review))-1), 
                    n = nrow(df),n.aprt = length(unique(df$name)), aprt = as.numeric(as.factor(df$name)))
   
   params = c("P","b1","b2","C")
   
-  ni = 50000; nb = 1000; nt = 20; nc = 3
+  ni = 10000; nb = 1000; nt = 20; nc = 3
   
   outj = jags(jags_data,parameters=params, model.file="reorderedlogit.txt", 
               n.thin=nt, n.chains=nc, n.burnin=nb, n.iter=ni)
