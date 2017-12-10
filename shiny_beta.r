@@ -11,7 +11,8 @@ colnames(df.complete)[grepl("url",colnames(df.complete))] = "purl"
 #if image is NA, change to another link instead
 df.complete$image = df.complete$image %>%ifelse(is.na(.),"https://www.internetbrands.com/wp-content/uploads/2014/05/hometravel_aptrating_2x.png"
                                                 ,.)
-#calculating
+#calculating how many people can accomodate in each floor plan
+#based on numbers of bedrooms
 per_room = df.complete$plan %>% 
   gsub("Studio", "1 Bedrooms", .) %>% 
   str_extract_all("\\d Bedrooms") %>% 
@@ -19,16 +20,22 @@ per_room = df.complete$plan %>%
   str_extract_all("\\d") %>% 
   unlist() %>% 
   as.numeric()
+
+#calculating unit rent by dividing total rent by number of people
 df.complete$rent = df.complete$rent / per_room
 
+#change distance unit from m to km
 df.complete$distance = df.complete$distance/ 1000
 
+#create vector variable contains info for each floor plan
 plan_list = list.files(path = ".", pattern = "class.*\\.Rdata", all.files = FALSE,
                        full.names = FALSE, recursive = FALSE,
                        ignore.case = FALSE, include.dirs = FALSE, no.. = FALSE) %>% 
   str_extract( "\\dBedrooms,\\dBathroom(s)?|Studio,\\dBathroom")
 
+#create variable for future use, shiny initiation
 first = 0
+
 shinyApp(
   ui <-bootstrapPage(
     
