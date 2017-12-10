@@ -82,7 +82,7 @@ shinyApp(
     output$map <- renderLeaflet({
       leaflet() %>%
         addTiles() %>%
-        setView(lng = -78.8986, lat = 35.9940, zoom = 12) #-78.8986 35.9940
+        setView(lng = -78.8986, lat = 35.9940, zoom = 13) #-78.8986 35.9940
     })
     
     
@@ -165,7 +165,7 @@ shinyApp(
       
       
       content <- paste0(
-        "<b><a href=",new_df()$purl,">",new_df()$name,"</a></b><br/>",
+        "<b><a href=",new_df()$purl,' target="_blank">',new_df()$name,"</a></b><br/>",
         "Floor_plan: ",new_df()$plan,"<br/>",
         "Rent: ",round(new_df()$rent),"<br/>",
         "<img src=", new_df()$image, " height = '200', width = '200'>")
