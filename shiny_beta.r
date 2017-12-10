@@ -26,7 +26,7 @@ plan_list = list.files(path = ".", pattern = "class.*\\.Rdata", all.files = FALS
                        ignore.case = FALSE, include.dirs = FALSE, no.. = FALSE) %>% 
   str_extract( "\\dBedrooms,\\dBathroom(s)?|Studio,\\dBathroom")
 
-
+first = 0
 shinyApp(
   ui <-bootstrapPage(
     
@@ -136,17 +136,29 @@ shinyApp(
       })
       #isolate(new_df$name)
       # print(nrow(new_df()))
+      small_df = reactive({
+       if (is.null(input$map_bounds))
+         return(df.complete[FALSE,])
+       bounds <- input$map_bounds
+       latRng <- range(bounds$north, bounds$south)
+       lngRng <- range(bounds$east, bounds$west)
+       
+       subset(new_df(),
+              lat >= latRng[1] & lat <= latRng[2] &
+                lon >= lngRng[1] & lon <= lngRng[2])
       
-      
-      if(nrow(new_df()) == 0) {
+      })
+      print(nrow(small_df()))
+      if(nrow(small_df()) == 0) {
+        if(first ==0){
+          first<<-1
+        }else{
         showModal(modalDialog(
           title = HTML('<center><font color="red">Warning: No results found for this input</font></center>'),
           HTML("<center><img src=https://i.imgur.com/nmpYQx2.jpg height = '400', width = '300'></center>"),
           easyClose = TRUE,footer = NULL
-        ))
+        ))}
       }
-      
-      
       
       
       col_var = c('red', 'white', 'lightblue', 'orange', 'green', 'beige', 
@@ -165,17 +177,17 @@ shinyApp(
       
       
       content <- paste0(
-        "<b><a href=",new_df()$purl,' target="_blank">',new_df()$name,"</a></b><br/>",
-        "Floor_plan: ",new_df()$plan,"<br/>",
-        "Rent: ",round(new_df()$rent),"<br/>",
-        "<img src=", new_df()$image, " height = '200', width = '200'>")
+        "<b><a href=",small_df()$purl,' target="_blank">',small_df()$name,"</a></b><br/>",
+        "Floor_plan: ",small_df()$plan,"<br/>",
+        "Rent: ",round(small_df()$rent),"<br/>",
+        "<img src=", small_df()$image, " height = '200', width = '200'>")
       
       
       
       leafletProxy("map") %>%
         clearMarkers() %>%
         addAwesomeMarkers(
-          new_df()$lon, new_df()$lat, icon=icons,
+          small_df()$lon, small_df()$lat, icon=icons,
           popup = content)
       })
       
