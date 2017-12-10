@@ -46,8 +46,16 @@ shinyApp(
                         draggable = TRUE, top = 3, left = "auto", right = 20, bottom = "auto",
                         width = 330, height = "auto",
                         
+          tags$img(src = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Duke_University_logo.svg/1280px-Duke_University_logo.svg.png", 
+                   width = "250px", height = "100px",
+                   style="display: block; margin-left: auto; margin-right: auto;"),
+                        
+          h1("Apt Rankings", 
+             style = "font-family: 'Lobster', cursive;
+             font-weight: 500; line-height: 1.1;", align = "center" 
+          ),
                         h4("Top5-Top15"),
-                        radioButtons("top", "Distribution type:",
+                        radioButtons("top",NULL, 
                                      choices = c("5" ,"10","15"),
                                      selected = "5"),
                         h4("Price Range"),
@@ -137,27 +145,27 @@ shinyApp(
       #isolate(new_df$name)
       # print(nrow(new_df()))
       small_df = reactive({
-       if (is.null(input$map_bounds))
-         return(df.complete[FALSE,])
-       bounds <- input$map_bounds
-       latRng <- range(bounds$north, bounds$south)
-       lngRng <- range(bounds$east, bounds$west)
-       
-       subset(new_df(),
-              lat >= latRng[1] & lat <= latRng[2] &
-                lon >= lngRng[1] & lon <= lngRng[2])
-      
+        if (is.null(input$map_bounds))
+          return(df.complete[FALSE,])
+        bounds <- input$map_bounds
+        latRng <- range(bounds$north, bounds$south)
+        lngRng <- range(bounds$east, bounds$west)
+        
+        subset(new_df(),
+               lat >= latRng[1] & lat <= latRng[2] &
+                 lon >= lngRng[1] & lon <= lngRng[2])
+        
       })
       print(nrow(small_df()))
       if(nrow(small_df()) == 0) {
         if(first ==0){
           first<<-1
         }else{
-        showModal(modalDialog(
-          title = HTML('<center><font color="red">Warning: No results found for this input</font></center>'),
-          HTML("<center><img src=https://i.imgur.com/nmpYQx2.jpg height = '400', width = '300'></center>"),
-          easyClose = TRUE,footer = NULL
-        ))}
+          showModal(modalDialog(
+            title = HTML('<center><font color="red">Warning: No results found for this input</font></center>'),
+            HTML("<center><img src=https://i.imgur.com/nmpYQx2.jpg height = '400', width = '300'></center>"),
+            easyClose = TRUE,footer = NULL
+          ))}
       }
       
       
@@ -189,10 +197,10 @@ shinyApp(
         addAwesomeMarkers(
           small_df()$lon, small_df()$lat, icon=icons,
           popup = content)
-      })
-      
     })
-  }
+    
+  })
+}
 )
 #  observe({
 #    if (is.null(input$goto))
