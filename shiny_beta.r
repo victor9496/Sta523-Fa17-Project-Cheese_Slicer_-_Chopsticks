@@ -148,7 +148,7 @@ shinyApp(
       
       
       
-      col_var = c('red', 'white', 'lightblue', 'orange', 'beige', 'green',
+      col_var = c('red', 'white', 'lightblue', 'orange', 'green', 'beige', 
                   'lightgreen', 'blue',  'lightred', 'purple',  'pink',
                   'cadetblue',  'darkred','gray', 'lightgray')
       
