@@ -9,7 +9,7 @@ library(dplyr)
 load("df_complete.Rdata")
 colnames(df.complete)[grepl("url",colnames(df.complete))] = "purl"
 df.complete$image = df.complete$image %>%ifelse(is.na(.),"https://www.internetbrands.com/wp-content/uploads/2014/05/hometravel_aptrating_2x.png"
-        ,.)
+                                                ,.)
 per_room = df.complete$plan %>% 
   gsub("Studio", "1 Bedrooms", .) %>% 
   str_extract_all("\\d Bedrooms") %>% 
@@ -24,7 +24,7 @@ df.complete$distance = df.complete$distance/ 1000
 plan_list = list.files(path = ".", pattern = "class.*\\.Rdata", all.files = FALSE,
                        full.names = FALSE, recursive = FALSE,
                        ignore.case = FALSE, include.dirs = FALSE, no.. = FALSE) %>% 
-                       str_extract( "\\dBedrooms,\\dBathroom(s)?|Studio,\\dBathroom")
+  str_extract( "\\dBedrooms,\\dBathroom(s)?|Studio,\\dBathroom")
 
 
 shinyApp(
@@ -79,11 +79,11 @@ shinyApp(
   server <- function(input, output, session) {
     #create map
     
-    # output$map <- renderLeaflet({
-    #   leaflet() %>%
-    #     addTiles() %>%
-    #     setView(lng = -78.8986, lat = 35.9940, zoom = 12) #-78.8986 35.9940
-    # })
+    output$map <- renderLeaflet({
+      leaflet() %>%
+        addTiles() %>%
+        setView(lng = -78.8986, lat = 35.9940, zoom = 12) #-78.8986 35.9940
+    })
     
     
     
@@ -124,7 +124,7 @@ shinyApp(
           arrange(desc(val))%>%
           slice(1:as.numeric(input$top))
         
-
+        
         return_df
         #val = sort(weighted_mean,decreasing = TRUE)[1:input$top]
         #rank_df = data.frame(name = names(val),val,plan = input$var)
@@ -144,7 +144,7 @@ shinyApp(
           "This is an important message!"
         ))
       }
-    
+      
       
       
       
@@ -171,13 +171,11 @@ shinyApp(
       
       
       
-      output$map <- renderLeaflet({
-        leaflet() %>%
-          addTiles() %>%
-          clearShapes() %>%
-          addAwesomeMarkers(
-            new_df()$lon, new_df()$lat, icon=icons, 
-            popup = content)
+      leafletProxy("map") %>%
+        clearMarkers() %>%
+        addAwesomeMarkers(
+          new_df()$lon, new_df()$lat, icon=icons,
+          popup = content)
       })
       
     })
