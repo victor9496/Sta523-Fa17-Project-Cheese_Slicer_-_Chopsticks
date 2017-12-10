@@ -153,12 +153,18 @@ shinyApp(
       })
       #print(nrow(small_df()))(test only)
     
-    #
+    #if the above dataframe have zero row(empty dataframe) should give warning to user
+    #could be 1.harsh input 2.no observation within the map they are looking at
     if(nrow(small_df()) == 0) {
-        if(first ==0){
-          first<<-1
+      #since everytime we open the map, it gives us the warning, we assume by default the dataframe above
+      #will have zero row no matter what, so we decide one more condition, if it is the second time have
+      #zero row, we then have the warning instead
+      if(first ==0){
+       #update global value, so it is not 0 instead  
+        first<<-1
         }else{
-          showModal(modalDialog(
+         #show model dialog with the warning message 
+         showModal(modalDialog(
             title = HTML('<center><font color="red">Warning: No results found for this input</font></center>'),
             HTML("<center><img src=https://i.imgur.com/nmpYQx2.jpg height = '400', width = '300'></center>"),
             easyClose = TRUE,footer = NULL
