@@ -5,32 +5,29 @@ library(purrr)
 library(geosphere)
 library(dplyr)
 
-
+#for test only
 site = "webURLs/web24.htm"
 
+#create function for scraping for all 145 websites
 apartment_finder = function(site) {
 
+                   #create another small function to extract test from html
                     extract_info = function(node) {
                       site %>% 
                         read_html() %>% 
                         html_node(node) %>% 
                         html_text()
                     }
-# #total count
-# review_count = extract_info('script[type="application/ld+json"]') %>% 
-#                str_extract_all(., "reviewRating") %>% 
-#                unlist() %>% 
-#                length() %>% 
-#                as.numeric()
 
-#count and average score
+
+#count and average score for each individual review
 review_score = extract_info('script[type="application/ld+json"]') %>% 
   str_match_all('ratingValue":\\s.(\\d)"')%>% 
   .[[1]]%>% # we know that it will only return one list from each page
   .[,2]%>% # second column is the part inside bracket we need
   as.numeric()
 
-#lon and lat
+#lon and lat for apartment site
 lon_lat = site %>%
   read_html() %>%
   html_text() %>% 
@@ -39,29 +36,26 @@ lon_lat = site %>%
   unlist() %>% 
   as.numeric() %>% 
   t()
-
+#if this information is not complete, either miss longitude or latitude, we treat them as NA for both
 if(length(lon_lat) != 2) lon_lat = rep(NA,2)
 
 
 #apartment name
 apt_name = extract_info('.last span')
 
-#floor plan(change)
+#floor plan aviable in this apartment
 floor_plan = site %>%
   read_html() %>%
   html_nodes('h3[class="link1"]') %>% 
   html_text()
 
-#rent
+#rent for each floor plan
 rent.raw = site %>%
   read_html() %>%
   html_nodes('#floorplans .widget') %>% 
   html_text()
-  # str_extract_all("\\$[\\d{1,}|,]") %>% 
-  # unlist() %>% 
-  # str_replace_all("\\$", "") %>% 
-  # as.numeric()
-
+  
+#if differnt sizes of room for each floor plan, calculate the average rent for each floor plan
 split_rent = unlist(str_split(rent.raw, "Bathroom"), recursive = FALSE) %>% 
   .[str_detect(.,"Price")]
 
@@ -73,6 +67,8 @@ num_rent = unlist(lapply(split_rent,
 rent_mean = unlist(lapply(num_rent, function(i) mean(as.numeric(i)))) %>% 
   .[!is.nan(.)]
 
+#the length of floor plan and rent not the same, we treat them as NA
+#since information is not complete
 if(length(rent_mean) != length(floor_plan)) {
   rent = rep(NA, length(floor_plan))
 } else {
