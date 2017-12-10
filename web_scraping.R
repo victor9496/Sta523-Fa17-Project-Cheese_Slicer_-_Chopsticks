@@ -127,7 +127,7 @@ distance = round(distm(lon_lat, chapel, fun = distHaversine)[1]) %>%
 #combine all the information as list
 info_list = list(apt_name, distance, rent, review_score,floor_plan)#, floor_mean_clean, floor_plan, floor,)
 
- #
+#use if statement to filter out NA info, like some zero length vector or NA element 
 if(any(lengths(info_list) == 0 | sapply(info_list, function(i) any(is.na(i))))|length(review_score)==0) {
   df.final = NA
 } else {
@@ -156,6 +156,7 @@ colnames(df.final) = c("name", "image", "rent","plan",
 return(df.final)
 }
 
+#loading data for web getting process
 load("urls.Rdata")
 apt.df = data.frame()
 
@@ -169,7 +170,7 @@ for (i in seq_len(133)) {
 test.df = apt.df %>% 
   select(-image)
 
-
+#again filter out the observation with NA inside except the image column
 df.complete = apt.df[!rowSums(is.na(test.df)) > 0,]
 
 save(df.complete, file="df_complete.Rdata")
