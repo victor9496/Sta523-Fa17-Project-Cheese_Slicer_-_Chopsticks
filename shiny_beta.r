@@ -2,14 +2,16 @@ library(shiny)
 library(leaflet)
 library(dplyr)
 
-#for demonstrate 
-# purl = urls[1:125]
-#old df.complete with 125 rows
-# df.complete = cbind(df.complete, purl)
+
 load("df_complete.Rdata")
+
+#change column name for easier future use
 colnames(df.complete)[grepl("url",colnames(df.complete))] = "purl"
+
+#if image is NA, change to another link instead
 df.complete$image = df.complete$image %>%ifelse(is.na(.),"https://www.internetbrands.com/wp-content/uploads/2014/05/hometravel_aptrating_2x.png"
                                                 ,.)
+#calculating
 per_room = df.complete$plan %>% 
   gsub("Studio", "1 Bedrooms", .) %>% 
   str_extract_all("\\d Bedrooms") %>% 
