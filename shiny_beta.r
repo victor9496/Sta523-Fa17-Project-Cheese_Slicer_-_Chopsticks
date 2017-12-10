@@ -171,12 +171,12 @@ shinyApp(
           ))}
       }
       
-      
+     #create custom color for markers below(only allowed color can not use rcolorbrewer 
       col_var = c('red', 'white', 'lightblue', 'orange', 'green', 'beige', 
                   'lightgreen', 'blue',  'lightred', 'purple',  'pink',
                   'cadetblue',  'darkred','gray', 'lightgray')
       
-      
+      #create markers with different colors and rankings(number)
       icons <- awesomeIcons(
         icon = 'ios-close',
         iconColor = 'black',
@@ -186,7 +186,7 @@ shinyApp(
         markerColor = col_var[1:input$top]
       )
       
-      
+      #info with apartment name, floor plan and rent as well as image on the pop up of the marker when clicked
       content <- paste0(
         "<b><a href=",small_df()$purl,' target="_blank">',small_df()$name,"</a></b><br/>",
         "Floor_plan: ",small_df()$plan,"<br/>",
@@ -194,7 +194,7 @@ shinyApp(
         "<img src=", small_df()$image, " height = '200', width = '200'>")
       
       
-      
+      #update the markers each time when we change input or move/zoom the map
       leafletProxy("map") %>%
         clearMarkers() %>%
         addAwesomeMarkers(
@@ -205,17 +205,4 @@ shinyApp(
   })
 }
 )
-#  observe({
-#    if (is.null(input$goto))
-#      return()
-#    isolate({
-#      map <- leafletProxy("map")
-#      map %>% clearPopups()
-#      dist <- 0.5
-#      zip <- input$goto$zip
-#      lat <- input$goto$lat
-#      lng <- input$goto$lng
-#      showZipcodePopup(zip, lat, lng)
-#      map %>% fitBounds(lng - dist, lat - dist, lng + dist, lat + dist)
-#    })
-#  })
+#special thanks to my teammate at the end for allowing me to use leaflet in this assigment and help me debug      
