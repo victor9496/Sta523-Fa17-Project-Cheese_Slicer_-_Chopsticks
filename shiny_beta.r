@@ -140,8 +140,9 @@ shinyApp(
       
       if(nrow(new_df()) == 0) {
         showModal(modalDialog(
-          title = "Important message",
-          "This is an important message!"
+          title = HTML('<center><font color="red">Warning: No results found for this input</font></center>'),
+          HTML("<center><img src=https://i.imgur.com/nmpYQx2.jpg height = '400', width = '300'></center>"),
+          easyClose = TRUE,footer = NULL
         ))
       }
       
