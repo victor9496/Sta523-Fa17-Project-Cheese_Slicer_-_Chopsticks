@@ -77,7 +77,7 @@ if(length(rent_mean) != length(floor_plan)) {
 
 
 
-#image 
+#extract url first image aviable on apartment rating website(could be NA) 
 image_url = site %>%
   read_html() %>%
   html_nodes('.gallery-image') %>% 
@@ -91,11 +91,16 @@ image_url = site %>%
 
 if(str_detect(image_url, "A$")) image_url = NA
 
-#distance to chapel
+#distance to chapel(Duke University) unit is meter by default
 chapel = c(-78.9424706, 36.0018988)
+#since the result return as a 1*1 matrix, we call it by [1]
 distance = round(distm(lon_lat, chapel, fun = distHaversine)[1]) %>% 
   as.numeric()
 
+#oringally look for the information for size for each floor plan (sq^2)
+#but since this information is not avaible for many apartment
+#decide to abandon this process
+                          
 # #calculate average floor size
 # floor = site %>%
 #   read_html() %>%
@@ -119,9 +124,10 @@ distance = round(distm(lon_lat, chapel, fun = distHaversine)[1]) %>%
 #   floor_mean_clean = floor_mean
 # }
 
-
+#combine all the information as list
 info_list = list(apt_name, distance, rent, review_score,floor_plan)#, floor_mean_clean, floor_plan, floor,)
 
+ #
 if(any(lengths(info_list) == 0 | sapply(info_list, function(i) any(is.na(i))))|length(review_score)==0) {
   df.final = NA
 } else {
