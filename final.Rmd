@@ -19,7 +19,7 @@ library(leaflet)
 
 #Get website
 
-```{r}
+```{r eval=FALSE}
 base_url0 = "https://www.apartmentratings.com"
 
 base_url1 = "https://www.apartmentratings.com/nc/durham/"
@@ -50,7 +50,7 @@ We get banned again when downloading each page from its url using `utils::downlo
 
 #Scraping
 
-```{r}
+```{r eval=FALSE}
 #for test only
 #site = "webURLs/web24.htm"
 
@@ -228,11 +228,77 @@ Our goals is to extract the name, image url, rent, individual rating/review, flo
 
 #modeling
 
-```{r}
+```{r eval=FALSE}
+load("df_complete.Rdata")
+plans = unique(df.complete$plan)
+library(R2jags)
+get_df = function(pl){
+  df = df.complete%>%filter(plan == pl)
 
+  
+  cat("data{
+      for(i.aprt in 1:n.aprt){ # this i.aprt represents the number of apartments
+      C0[i.aprt,1] ~ dnorm(0,0.1)
+      C0[i.aprt,2] ~ dnorm(0,0.1)
+      C0[i.aprt,3] ~ dnorm(0,0.1)
+      C0[i.aprt,4] ~ dnorm(0,0.1)
+      C0[i.aprt,5] ~ dnorm(0,0.1)
+      }
+      }model{
+      # likelihood
+      for(i in 1:n){# This i represents # of reviews for all individuals
+      Y[i] ~ dcat(P[i,])
+      # probability of taking a value in one of the categories
+      # separated by 5 cuts (we have six ordered categories 0 to 5 star)
+      # so P[i,]: dim 1*6
+      P[i,1] <- max(min(1 - Q[i,1],1),0)
+      for (i.cut in 2:n.cut){
+      P[i,i.cut] <- Q[i,i.cut-1] - Q[i,i.cut]
+      }
+      P[i,n.cut+1] <- max(min(Q[i,n.cut],1),0)
+      # random effect
+      for(i.cut in 1:n.cut){ # Z[i,]: dim 1*5
+      logit(Q[i,i.cut]) <- Z[i,i.cut]
+      Z[i,i.cut] <- b1*distance[i] + b2*rent[i] - C[(aprt[i]),i.cut] 
+      }
+      }
+      # priors
+      b1 ~ dnorm(0.0,0.01)
+      b2 ~ dnorm(0,0.01)
+      for(i.aprt in 1:n.aprt){ # C[i.aprt,] : dim 1*5
+      C[i.aprt,1:5] <- sort(C0[i.aprt,])
+      }
+      }", fill=TRUE, file="reorderedlogit.txt")
+  #unload.module("glm")
+  jags_data = list(Y =as.numeric(df$review)+1, distance =as.numeric(scale(df$distance)),
+                   rent = as.numeric(scale(df$rent)),n.cut = (length(unique(df$review))-1), 
+                   n = nrow(df),n.aprt = length(unique(df$name)), aprt = as.numeric(as.factor(df$name)))
+  
+  params = c("P","b1","b2","C")
+  
+  ni = 50000; nb = 10000; nt = 20; nc = 3
+  
+  outj = jags(jags_data,parameters=params, model.file="reorderedlogit.txt", 
+              n.thin=nt, n.chains=nc, n.burnin=nb, n.iter=ni)
+  
+  label_prob = outj$BUGSoutput$sims.matrix[,grepl("P",colnames(outj$BUGSoutput$sims.matrix))]
+
+  classprb = lapply(0:5,function(i) label_prob[,cumsum(table(factor(df$name, levels=unique(df$name))))+nrow(df)*i])
+  for (i in seq_along(classprb)){
+    colnames(classprb[[i]])  = unique(df$name)
+  }
+  save(classprb, file=paste0("classprb",gsub(" ","",pl),".Rdata"))
+}
+sapply(plans,get_df)
 ```
 
+This part is the implementation of random effect ordered logitsic regression with jags. It will take several hours to run which is the reason why we don't run the code every time in the shiny. This is justifiable since we do model every housings in Durham (which has all the data we need for modeling such as floor plan, rent etc.) so unless the user is interested in an apartment with few reviews which the result might change considerably if a new review is posted (it's still an hierarchical model with same value of coefficients between groups so it shouldn't change much anyway), this app should work fine without running the model every time.
 
+The model itself is a modification of a similar model from <a href="http://yusung.blogspot.com/2008/03/ordered-logistic-model-with-varying.html"> this blog post </a> which is written in BUGS. There were some notable differences in BUGS and JAGS such as the treatment of the truncation and prior ordering, so we moved the part where we defined five prior intercepts (we have categories from 0 to 5 stars so we need 5 splits) to the data section and then sorted the intercept values so that each categories are given ordered random intercepts (for this, we followed the prior ordering section in p.36 on JAGS Version 3.4.0 user manual).
+
+The general discription of this model is that we are taking reviews of each individual from each apartment as a realization of a categorical distribution with a certain probabilities for each class (0 to 5 stars) which can be represented as a subtraction of log odds. Furthermore we assume that the log odds are represented by a linear equation with rent and distance from the Duke (which is kind of weird since it's not just Duke people that rent the apartment in Durham but the biggest employer in this area is Duke so we might be able to justify it). Then we also assume that coefficients are the same for all  apartments (the rent and distance is all group variables of each apartment so no individual level predictors are present in this model) and the only difference is in the intercepts which is given an ordered normal distribution as a prior.
+
+The dataframe we get from running this chunk is the MCMC samples of posterior class probabilities for each apartment. We use the weighted average (so 0 to 5 stars will be weighted according to its probability) of this as a score to rank apartments. Since we will get a distribution of this probability our resulting scores will also be a distribution which we cannot compare directly but can be made into a ranking by taking a certain quantile from it and sort accordingly which is what the shiny app does internally given the data form this chunk.
 
 #shiny
 
