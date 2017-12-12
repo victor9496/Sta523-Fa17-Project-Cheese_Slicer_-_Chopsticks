@@ -510,7 +510,9 @@ shinyApp(
 Shiny in the server:
 https://victor9496.shinyapps.io/apt_rating/
 
-For our shiny app, we follow the example from shiny website <a href="https://github.com/rstudio/shiny-examples/tree/master/063-superzip-example"> superzip </a> we require users to provide the following inputs:
+For our shiny app, we follow the example from shiny website <a href="https://github.com/rstudio/shiny-examples/tree/master/063-superzip-example"> superzip </a>.
+
+we require users to provide the following inputs:
 
 1. Numbers of ranking(top 5, 10,15)
 
