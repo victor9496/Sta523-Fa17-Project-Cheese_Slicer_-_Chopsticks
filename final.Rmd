@@ -52,7 +52,7 @@ We get banned again when downloading each page from its url using `utils::downlo
 
 ```{r}
 #for test only
-site = "webURLs/web24.htm"
+#site = "webURLs/web24.htm"
 
 #create function for scraping for all 145 websites
 apartment_finder = function(site) {
