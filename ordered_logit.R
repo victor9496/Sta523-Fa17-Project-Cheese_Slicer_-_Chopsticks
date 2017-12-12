@@ -47,7 +47,7 @@ get_df = function(pl){
   
   params = c("P","b1","b2","C")
   
-  ni = 10000; nb = 1000; nt = 20; nc = 3
+  ni = 50000; nb = 10000; nt = 20; nc = 3
   
   outj = jags(jags_data,parameters=params, model.file="reorderedlogit.txt", 
               n.thin=nt, n.chains=nc, n.burnin=nb, n.iter=ni)
