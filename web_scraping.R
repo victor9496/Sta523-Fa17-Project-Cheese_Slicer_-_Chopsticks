@@ -144,7 +144,7 @@ colnames(df.final) = c("name", "image", "rent","plan",
                        "review","distance", "lon", "lat")
 }
 
-#different score
+# different score
 
 # dif_score = site %>%
 #   read_html() %>%
