@@ -1,0 +1,464 @@
+---
+title: "final_code"
+author: "Team-Cheese_Slicer_-_Chopsticks"
+date: "12/12/2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rvest)
+library(dplyr)
+library(magrittr)
+library(stringr)
+library(purrr)
+library(geosphere)
+library(shiny)
+library(leaflet)
+```
+
+#Get website
+
+```{r}
+base_url0 = "https://www.apartmentratings.com"
+
+base_url1 = "https://www.apartmentratings.com/nc/durham/"
+base_url2 = "https://www.apartmentratings.com/nc/durham/page=1/"
+base_url3 = "https://www.apartmentratings.com/nc/durham/page=2/"
+base_url4 = "https://www.apartmentratings.com/nc/durham/page=3/"
+base_url5 = "https://www.apartmentratings.com/nc/durham/page=4/"
+base_url6 = "https://www.apartmentratings.com/nc/durham/page=5/"
+base_url = c(base_url1, base_url2, base_url3,
+             base_url4, base_url5, base_url6)
+
+apt_url = c()
+
+for (i in 1:6) {
+  apt_url0 = base_url[i] %>% read_html() %>%
+    html_nodes('a[class="communityLink"]') %>% html_attr("href")
+  apt_url = c(apt_url, apt_url0)
+}
+
+urls = apt_url %>% unlist() %>% unique() %>% paste0(base_url0, .)
+urls = urls[-which(urls %in% "")]
+save(urls, file="urls.Rdata")
+```
+
+All of our data are from the website https://www.apartmentratings.com/nc/durham/. Firstly we have to get the urls of all 145 apartments, then we scrap the data we need from each of them.   
+Since there are no APIs provided by this site, the first thought is to use `rvest` to obtain those ulrs by extracting certain html nodes. But we are banned after the first try, so we use `httrack` to create the mirror website. However, _apartmentratings_ has such an invincible protection mechanism that web copying turns out to be impossible as well. So we download its source code as a tex file and use regular expression to obtain target urls.   
+We get banned again when downloading each page from its url using `utils::download.file()`, so we have to download them manually. For each downloaded `.htm` file, we basically use `rvest` and regular expression to extract and categorize the data including `apartment names`, `floor plans`, `distance`, so on and so forth. Finally, we save these data as a dataframe and use it as our sample data for the next part.
+
+#Scraping
+
+```{r}
+#for test only
+site = "webURLs/web24.htm"
+
+#create function for scraping for all 145 websites
+apartment_finder = function(site) {
+
+                   #create another small function to extract test from html
+                    extract_info = function(node) {
+                      site %>% 
+                        read_html() %>% 
+                        html_node(node) %>% 
+                        html_text()
+                    }
+
+
+#count and average score for each individual review
+review_score = extract_info('script[type="application/ld+json"]') %>% 
+  str_match_all('ratingValue":\\s.(\\d)"')%>% 
+  .[[1]]%>% # we know that it will only return one list from each page
+  .[,2]%>% # second column is the part inside bracket we need
+  as.numeric()
+
+#lon and lat for apartment site
+lon_lat = site %>%
+  read_html() %>%
+  html_text() %>% 
+  str_extract_all("\\[\\'longitude\\'\\] = '-\\d+\\.\\d+|\\[\\'latitude\\'\\] = '\\d+\\.\\d+") %>%  
+  str_extract_all("-?\\d+\\.\\d+") %>% 
+  unlist() %>% 
+  as.numeric() %>% 
+  t()
+#if this information is not complete, either miss longitude or latitude, we treat them as NA for both
+if(length(lon_lat) != 2) lon_lat = rep(NA,2)
+
+
+#apartment name
+apt_name = extract_info('.last span')
+
+#floor plan aviable in this apartment
+floor_plan = site %>%
+  read_html() %>%
+  html_nodes('h3[class="link1"]') %>% 
+  html_text()
+
+#rent for each floor plan
+rent.raw = site %>%
+  read_html() %>%
+  html_nodes('#floorplans .widget') %>% 
+  html_text()
+  
+#if differnt sizes of room for each floor plan, calculate the average rent for each floor plan
+split_rent = unlist(str_split(rent.raw, "Bathroom"), recursive = FALSE) %>% 
+  .[str_detect(.,"Price")]
+
+num_rent = unlist(lapply(split_rent,
+                          function(i) str_extract_all(str_replace_all(i, ",", ""), "\\$\\d{3,}")),
+                   recursive = FALSE) %>% 
+  lapply(., function(i) str_replace_all(i, "\\$", ""))
+
+rent_mean = unlist(lapply(num_rent, function(i) mean(as.numeric(i)))) %>% 
+  .[!is.nan(.)]
+
+#the length of floor plan and rent not the same, we treat them as NA
+#since information is not complete
+if(length(rent_mean) != length(floor_plan)) {
+  rent = rep(NA, length(floor_plan))
+} else {
+  rent = rent_mean
+}
+
+
+
+#extract url first image aviable on apartment rating website(could be NA) 
+image_url = site %>%
+  read_html() %>%
+  html_nodes('.gallery-image') %>% 
+  html_attrs() %>% 
+  unlist() %>% 
+  str_extract("^/.*g$") %>% 
+  .[!is.na(.)] %>% 
+#only need the first image
+  .[1] %>% 
+  paste0("http:", .)
+
+if(str_detect(image_url, "A$")) image_url = NA
+
+#distance to chapel(Duke University) unit is meter by default
+chapel = c(-78.9424706, 36.0018988)
+#since the result return as a 1*1 matrix, we call it by [1]
+distance = round(distm(lon_lat, chapel, fun = distHaversine)[1]) %>% 
+  as.numeric()
+
+#oringally look for the information for size for each floor plan (sq^2)
+#but since this information is not avaible for many apartment
+#decide to abandon this process
+                          
+# #calculate average floor size
+# floor = site %>%
+#   read_html() %>%
+#   html_nodes('#floorplans .widget') %>% 
+#   html_text()
+# 
+# split_floor = unlist(str_split(floor, "\\d Bathroom"), recursive = FALSE)
+# 
+# num_floor = unlist(lapply(split_floor,
+#                           function(i) str_extract_all(str_replace_all(i, ",", ""), "\\.\\d{3,}")),
+#                    recursive = FALSE) %>% 
+#   lapply(., function(i) str_replace_all(i, "\\.", ""))
+# 
+# floor_mean = unlist(lapply(num_floor, function(i) mean(as.numeric(i)))) %>% 
+#   .[!is.na(.)]
+#   
+# 
+# if(length(floor_mean) != length(floor_plan)) {
+#  floor_mean_clean = rep(NA, length(floor_plan))
+# } else {
+#   floor_mean_clean = floor_mean
+# }
+
+#combine all the information as list
+info_list = list(apt_name, distance, rent, review_score,floor_plan)#, floor_mean_clean, floor_plan, floor,)
+
+#use if statement to filter out NA info, like some zero length vector or NA element 
+if(any(lengths(info_list) == 0 | sapply(info_list, function(i) any(is.na(i))))|length(review_score)==0) {
+  df.final = NA
+} else {
+
+#generate final dataframe
+df.final =  as.data.frame(cbind(apt_name, image_url), 
+                          stringsAsFactors = FALSE) %>% 
+  slice(rep(1:n(), length(floor_plan))) %>% 
+  slice(rep(1:n(),length(review_score)))%>%
+  cbind( rent, floor_plan,
+        #floor_mean_clean,
+        review_score, distance, lon_lat)
+
+colnames(df.final) = c("name", "image", "rent","plan",
+                       #"size", 
+                       "review","distance", "lon", "lat")
+}
+
+# different score
+
+# dif_score = site %>%
+#   read_html() %>%
+#   html_nodes('#content_PropertyBreakdown .score') %>% 
+#   html_text() 
+
+return(df.final)
+}
+
+#loading data for web getting process
+load("urls.Rdata")
+apt.df = data.frame()
+
+for (i in seq_len(133)) {
+  df = apartment_finder(paste0("webURLs/web", i, ".htm"))
+  if(!is.na(df)){
+    apt.df = rbind(apt.df,cbind(df,urls[i]))
+  }
+}
+
+test.df = apt.df %>% 
+  select(-image)
+
+#again filter out the observation with NA inside except the image column
+df.complete = apt.df[!rowSums(is.na(test.df)) > 0,]
+
+save(df.complete, file="df_complete.Rdata")
+```
+
+Our goals is to extract the name, image url, rent, individual rating/review, floor_plan, longtitude, latitude, company url for each 145 apartment in Durham based on the data from apartmentratings.com
+
+
+
+#modeling
+
+```{r}
+
+```
+
+
+
+#shiny
+
+
+```{r}
+load("df_complete.Rdata")
+
+#change column name for easier future use
+colnames(df.complete)[grepl("url",colnames(df.complete))] = "purl"
+
+#if image is NA, change to another link instead
+df.complete$image = df.complete$image %>%ifelse(is.na(.),"https://www.internetbrands.com/wp-content/uploads/2014/05/hometravel_aptrating_2x.png"
+                                                ,.)
+#calculating how many people can accomodate in each floor plan
+#based on numbers of bedrooms
+per_room = df.complete$plan %>% 
+  gsub("Studio", "1 Bedrooms", .) %>% 
+  str_extract_all("\\d Bedrooms") %>% 
+  unlist() %>% 
+  str_extract_all("\\d") %>% 
+  unlist() %>% 
+  as.numeric()
+
+#calculating unit rent by dividing total rent by number of people
+df.complete$rent = df.complete$rent / per_room
+
+#change distance unit from m to km
+df.complete$distance = df.complete$distance/ 1000
+
+#create vector variable contains info for each floor plan
+plan_list = list.files(path = ".", pattern = "class.*\\.Rdata", all.files = FALSE,
+                       full.names = FALSE, recursive = FALSE,
+                       ignore.case = FALSE, include.dirs = FALSE, no.. = FALSE) %>% 
+  str_extract( "\\dBedrooms,\\dBathroom(s)?|Studio,\\dBathroom")
+
+#create variable for future use, shiny initiation
+first = 0
+
+#https://github.com/rstudio/shiny-examples/tree/master/063-superzip-example
+#Many thanks to this superzip example to help us construct the barebones of our shiny app
+shinyApp(
+  ui <-bootstrapPage(
+    
+    mainPanel(
+      div(class="outer",
+          tags$style(
+            # Include our custom CSS
+            includeCSS("styles.css"),
+            includeScript("gomap.js")
+          ),
+          
+         
+          leafletOutput("map", width="100%", height="100%"),
+          
+          #set up of the panel
+          absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
+                        draggable = TRUE, top = 3, left = "auto", right = 20, bottom = "auto",
+                        width = 330, height = "auto",
+           #add logo of duke and center             
+          tags$img(src = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Duke_University_logo.svg/1280px-Duke_University_logo.svg.png", 
+                   width = "250px", height = "100px",
+                   style="display: block; margin-left: auto; margin-right: auto;"),
+                        
+          h1("Apt Rankings", 
+             style = "font-family: 'Lobster', cursive;
+             font-weight: 500; line-height: 1.1;", align = "center" 
+          ),
+                        h4("Top5-Top15"),
+                        radioButtons("top",NULL, 
+                                     choices = c("5" ,"10","15"),
+                                     selected = "5"),
+                        h4("Price Range"),
+                        selectInput("price", "Below", 
+                                    choices = c(550,600, 650, 700, 800,
+                                                "Above 800"), selected = "700"),
+                        h4("Distance"),
+                        selectInput("distance", label="Below", 
+                                    choices = c(2*1:4, "Above 10"), selected = "8"),
+                        h4("Floor_plan"),
+                        selectInput("var", "Below", choices = plan_list, 
+                                    selected = "1 Bedrooms, 1 Bathroom"),
+                        h4("Uncertianty"),
+                        sliderInput("uncertainty",label=NULL, min=0.1, max=0.75, 
+                                    value=0.25, step=0.1)
+                        
+          ),
+          #credit for apartmentratings.com for allow us to use their data
+          tags$div(id="cite",
+                   'Data compiled for ', tags$em('Coming Apart: Copyright © 2017 Apartmentratings.com')
+          )
+      )
+    ),
+    
+    conditionalPanel("false", icon("crosshair"))
+  ),
+  
+  
+  server <- function(input, output, session) {
+    
+    #create map
+    output$map <- renderLeaflet({
+      leaflet() %>%
+        addTiles() %>%
+        setView(lng = -78.8986, lat = 35.9940, zoom = 13) #-78.8986 35.9940 center location of Durham
+    })
+    
+    #create observe for each change in input update markers below
+    observe({
+      
+      new_df = reactive({
+        #below code for test purpose only
+        # input = data.frame(var="1Bedrooms,1Bathroom",uncertainty = 0.3,price = 900,distance=10000,top = 5)
+        price = input$price
+        dist = input$distance
+       #specify the ending value
+        if(dist == "Above 10") dist = 30
+        if(price == "Above 800") price = 2000
+       
+        #change floor_plan notation
+        floor_plan = gsub("(\\d)(\\w)","\\1 \\2",input$var) %>% 
+          gsub(",", ", ", .)
+        
+        #create or filter large dataframe
+        df = get(load(paste0("classprb",input$var,".Rdata")))
+        rm(classprb)
+        samps = sapply(df,function(x) apply(x,2,function(i) quantile(i,input$uncertainty)))
+        weighted_mean = apply(samps,1,function(x) weighted.mean(0:5,x))
+        weighted_mean = data.frame(name = names(weighted_mean),val = weighted_mean,plan = floor_plan)
+        return_df = merge(weighted_mean,df.complete,by = c("name","plan"))
+        return_df = return_df%>%
+          filter(!duplicated(name))%>%
+          filter(rent< as.numeric(price))%>%
+          filter(distance< as.numeric(dist))%>%
+          arrange(desc(val))%>%
+          slice(1:as.numeric(input$top))
+     
+        return_df
+      })
+      
+      #filter a even small dataframe baseon the movement of map
+      #special thanks to superzip expamle again
+      small_df = reactive({
+        if (is.null(input$map_bounds))
+          return(new_df()[FALSE,])
+        bounds <- input$map_bounds
+        latRng <- range(bounds$north, bounds$south)
+        lngRng <- range(bounds$east, bounds$west)
+        
+        subset(new_df(),
+               lat >= latRng[1] & lat <= latRng[2] &
+                 lon >= lngRng[1] & lon <= lngRng[2])
+        
+      })
+      #print(nrow(small_df()))(test only)
+    
+    #if the above dataframe have zero row(empty dataframe) should give warning to user
+    #could be 1.harsh input 2.no observation within the map they are looking at
+    if(nrow(small_df()) == 0) {
+      #since everytime we open the map, it gives us the warning, we assume by default the dataframe above
+      #will have zero row no matter what, so we decide one more condition, if it is the second time have
+      #zero row, we then have the warning instead
+      if(first ==0){
+       #update global value, so it is not 0 instead  
+        first<<-1
+        }else{
+         #show model dialog with the warning message 
+         showModal(modalDialog(
+            title = HTML('<center><font color="red">Warning: No results found for this input</font></center>'),
+            HTML("<center><img src=https://i.imgur.com/nmpYQx2.jpg height = '400', width = '300'></center>"),
+            easyClose = TRUE,footer = NULL
+          ))}
+      }
+      
+     #create custom color for markers below(only allowed color can not use rcolorbrewer 
+      col_var = c('red', 'white', 'lightblue', 'orange', 'green', 'beige', 
+                  'lightgreen', 'blue',  'lightred', 'purple',  'pink',
+                  'cadetblue',  'darkred','gray', 'lightgray')
+      
+      #create markers with different colors and rankings(number)
+      icons <- awesomeIcons(
+        icon = 'ios-close',
+        iconColor = 'black',
+        library = 'ion',
+        fontFamily = "system-ui",
+        text = 1:input$top,
+        markerColor = col_var[1:input$top]
+      )
+      
+      #info with apartment name, floor plan and rent as well as image on the pop up of the marker when clicked
+      content <- paste0(
+        "<b><a href=",small_df()$purl,' target="_blank">',small_df()$name,"</a></b><br/>",
+        "Floor_plan: ",small_df()$plan,"<br/>",
+        "Rent: ",round(small_df()$rent),"<br/>",
+        "<img src=", small_df()$image, " height = '200', width = '200'>")
+      
+      
+      #update the markers each time when we change input or move/zoom the map
+      leafletProxy("map") %>%
+        clearMarkers() %>%
+        addAwesomeMarkers(
+          small_df()$lon, small_df()$lat, icon=icons,
+          popup = content)
+    })
+    
+  })
+#special thanks to my teammate at the end for allowing me to use leaflet in this assigment and help me debug      
+```
+
+Shiny in the server:
+https://victor9496.shinyapps.io/apt_rating/
+
+For our shiny app, we require users to provide the following inputs:
+
+1. Numbers of ranking(top 5, 10,15)
+
+2. Unit price(the range below specified average price:total rent / number of bedroom)
+
+3. Distance(distance(km) from apartment to Duke University (Chapel) )
+
+4. Floor plan(Studio, One Bedroom, etc.)
+
+5. Uncertainty(which point we take from posterior distribution)
+
+In terms of output,  markers will show up in the map with different colors and rankings for the apartment that stand out from the user inputs above, the markers also contain pop-up that includes name of apartment(w/ hyper-link), rent, floor_plan and the picture(if available).
+
+If there is no ranking/observation based on the combination of the user input, we will provide a "warning message" to advise users to change their input.
+
+Moreover, our ranking is also based on boundary of the map user in at the time, depending on the user behvaior (zoom in/out, move around  the map), the rankings will be constantly updated each time; therefore, if user decide to browsing the map outside Durham area or zoom in too much with no data(apartment) availble in that area, it will show the "warning message" as above.
+
